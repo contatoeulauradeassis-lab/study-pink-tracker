@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meu ano de estudos ♡</title>
+<style>
+:root {
+  --bg: #fff8fb;
+  --text: #633d52;
+  --pink0: #fceaf2;
+  --pink1: #f8c8dc;
+  --pink2: #ed91bb;
+  --pink3: #d95795;
+  --pink4: #a92d6c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 22px;
+  font-family: Arial, sans-serif;
+  color: var(--text); background: var(--bg);
+}
+main { max-width: 900px; margin: auto; }
+h2 { margin-bottom: 5px; }
+p { line-height: 1.5; }
+.stats {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  margin: 20px 0;
+}
+.stat {
+  background: white; border-radius: 12px;
+  padding: 12px 16px; flex: 1; min-width: 120px;
+}
+.stat strong { display: block; font-size: 23px; }
+.toolbar {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  align-items: center; margin: 18px 0;
+}
+button, select {
+  border: 1px solid #edc6d8; border-radius: 9px;
+  background: white; color: var(--text);
+  padding: 9px 12px; font-size: 14px;
+}
+.grid-wrap { overflow-x: auto; padding-bottom: 10px; }
+.months {
+  display: grid; grid-template-columns: repeat(12, 1fr);
+  min-width: 570px; margin-left: 28px;
+  font-size: 11px; margin-bottom: 7px;
+}
+.calendar {
+  display: grid; grid-template-rows: repeat(7, 12px);
+  grid-auto-flow: column; grid-auto-columns: 12px;
+  gap: 4px; width: max-content;
+}
+.weekday {
+  display: grid; grid-template-rows: repeat(7, 12px);
+  gap: 4px; margin-right: 8px; font-size: 10px;
+}
+.heatmap { display: flex; min-width: max-content; }
+.day {
+  width: 12px; height: 12px; border-radius: 3px;
+  border: 0; padding: 0; cursor: pointer;
+}
+.level0 { background: var(--pink0); }
+.level1 { background: var(--pink1); }
+.level2 { background: var(--pink2); }
+.level3 { background: var(--pink3); }
+.level4 { background: var(--pink4); }
+.day:focus { outline: 2px solid #633d52; }
+.legend {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; margin-top: 15px;
+}
+.legend .day { display: inline-block; }
+.note { font-size: 12px; color: #946b82; }
+</style>
+</head>
+<body>
+<main>
+  <h2>♡ Meu ano de estudos</h2>
+  <p>Um quadradinho de cada vez. Continue florescendo! 🌸</p>
+
+  <div class="toolbar">
+    <label for="year">Ano:</label>
+    <select id="year"></select>
+    <button id="today">Registrar hoje</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">Dias estudados<strong id="days">0</strong></div>
+    <div class="stat">Horas estudadas<strong id="hours">0</strong></div>
+    <div class="stat">Este ano<strong id="percent">0%</strong></div>
+  </div>
+
+  <div class="grid-wrap">
+    <div class="months" id="months"></div>
+    <div class="heatmap">
+      <div class="weekday">
+        <span></span><span>Seg</span><span></span>
+        <span>Qua</span><span></span><span>Sex</span><span></span>
+      </div>
+      <div class="calendar" id="calendar"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span>Menos</span>
+    <span class="day level0"></span>
+    <span class="day level1"></span>
+    <span class="day level2"></span>
+    <span class="day level3"></span>
+    <span class="day level4"></span>
+    <span>Mais horas</span>
+  </div>
+
+  <p class="note">
+    Clique em um quadradinho para registrar as horas daquele dia.
+    Seus registros ficam salvos neste navegador.
+  </p>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const storeKey = "meu-calendario-estudos-rosa-v1";
+let records = {};
+try { records = JSON.parse(localStorage.getItem(storeKey) || "{}"); }
+catch { records = {}; }
+
+const currentYear = new Date().getFullYear();
+for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+  const option = document.createElement("option");
+  option.value = y;
+  option.textContent = y;
+  if (y === currentYear) option.selected = true;
+  $("year").appendChild(option);
+}
+
+const keyFor = d =>
+  d.getFullYear() + "-" +
+  String(d.getMonth()+1).padStart(2,"0") + "-" +
+  String(d.getDate()).padStart(2,"0");
+
+function save() {
+  localStorage.setItem(storeKey, JSON.stringify(records));
+}
+
+function render() {
+  const year = Number($("year").value);
+  const start = new Date(year, 0, 1);
+  const end = new Date(year + 1, 0, 1);
+  const offset = (start.getDay() + 6) % 7;
+  const totalDays = (end - start) / 86400000;
+  const calendar = $("calendar");
+  calendar.innerHTML = "";
+  $("months").innerHTML = "";
+
+  const months = $("months");
+  for (let m = 0; m < 12; m++) {
+    const span = document.createElement("span");
+    span.textContent = new Date(year, m, 1)
+      .toLocaleDateString("pt-BR", {month:"short"});
+    months.appendChild(span);
+  }
+
+  let days = 0, hours = 0;
+  for (let i = 0; i < totalDays; i++) {
+    const date = new Date(year, 0, i + 1);
+    const key = keyFor(date);
+    const h = Number(records[key] || 0);
+    if (h > 0) { days++; hours += h; }
+
+    const button = document.createElement("button");
+    const level = h === 0 ? 0 : h < 2 ? 1 : h < 4 ? 2 : h < 6 ? 3 : 4;
+    button.className = "day level" + level;
+    button.style.gridColumn = Math.floor((i + offset) / 7) + 1;
+    button.style.gridRow = ((i + offset) % 7) + 1;
+    button.title = `${key}: ${h} hora(s). Clique para editar`;
+    button.setAttribute("aria-label", button.title);
+    button.onclick = () => {
+      const answer = prompt(
+        `Quantas horas você estudou em ${date.toLocaleDateString("pt-BR")}?`,
+        String(records[key] || 0)
+      );
+      if (answer === null) return;
+      const value = Number(answer.replace(",", "."));
+      if (!Number.isFinite(value) || value < 0 || value > 24) {
+        alert("Digite um número entre 0 e 24.");
+        return;
+      }
+      if (value === 0) delete records[key];
+      else records[key] = value;
+      save();
+      render();
+    };
+    calendar.appendChild(button);
+  }
+
+  $("days").textContent = days;
+  $("hours").textContent = Number(hours.toFixed(1));
+  $("percent").textContent =
+    Math.round(days / totalDays * 100) + "%";
+}
+
+$("year").addEventListener("change", render);
+$("today").onclick = () => {
+  const today = new Date();
+  $("year").value = today.getFullYear();
+  render();
+  const key = keyFor(today);
+  const answer = prompt("Quantas horas você estudou hoje?", String(records[key] || 0));
+  if (answer === null) return;
+  const value = Number(answer.replace(",", "."));
+  if (!Number.isFinite(value) || value < 0 || value > 24) {
+    alert("Digite um número entre 0 e 24.");
+    return;
+  }
+  if (value === 0) delete records[key];
+  else records[key] = value;
+  save();
+  render();
+};
+render();
+</script>
+</body>
+</html>
